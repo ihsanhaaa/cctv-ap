@@ -100,142 +100,109 @@
 
         <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
         <script>
-            // Initialize the map
-            var map = L.map('map').setView([-0.03568, 109.33296], 13);
+            document.addEventListener('DOMContentLoaded', function () {
+                // Inisialisasi peta
+                var map = L.map('map').setView([-0.05571, 109.34964], 13); // Koordinat default
         
-            // Add OpenStreetMap tile layer
-            var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
+                // Tambahkan tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
         
-            // Add Esri World Imagery tile layer
-            var esriLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles © Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            });
-        
-            // Data from server
-            var markaJalans = @json($markaJalans);
-
-            var customIcon = L.icon({
-                iconUrl: 'cctv_5695715.png',  // Ganti dengan path icon yang ingin digunakan
-                iconSize: [32, 32],               // Sesuaikan ukuran icon
-                iconAnchor: [16, 32],             // Anchor point untuk icon
-                popupAnchor: [0, -32]             // Posisi popup relatif terhadap icon
-            });
-        
-            // Iterate through markaJalans data
-            markaJalans.forEach(function(marka) {
-                if (marka.lokasi) {
-                    var geojson = JSON.parse(marka.lokasi.geojson);
-        
-                    // Display picture if available
-                    var pictureUrl = marka.fotos.length > 0 ? `{{ asset('') }}${marka.fotos[0].foto_path}` : 'Tidak ada foto';
-        
-                    // Form to upload photo
-                    var addPhotoForm = `
-                        <form id="uploadForm${marka.id}" enctype="multipart/form-data" class="mt-2">
-                            <input type="file" name="photo" accept="image/*" class="form-control form-control-sm mb-2">
-                            <button type="button" class="btn btn-sm btn-primary" onclick="uploadPhoto(${marka.id})">Upload Foto</button>
-                            <div id="uploadStatus${marka.id}" class="mt-2"></div>
-                        </form>
-                    `;
-        
-                    // Delete form and detail button
-                    var deleteForm = `
-                        <form action="/data-cctv/${marka.id}" method="POST" onsubmit="return confirm('Yakin ingin menghapus data ini?');" class="mx-1">
-                            @csrf
-                            @method('DELETE')
-                            <button type="submit" class="btn btn-sm btn-danger">Hapus</button>
-                        </form>
-                    `;
-                    var detailButton = `<a href="/data-cctv/${marka.id}" target="_blank" class="btn btn-sm btn-info text-white mx-1"><i class="fas fa-eye"></i> Lihat Detail</a>`;
-        
-                    // Popup content with table structure
-                    var popupContent = `
-                        <div class="carousel-container mb-3">
-                            ${marka.fotos.length === 0 ? '<p class="text-center">Tidak ada foto</p>' : `<img src="${pictureUrl}" class="carousel-image" alt="Foto ${marka.nama_marka}">`}
-                        </div>
-                        <table class="table table-bordered">
-                            <tr><th>Nama CCTV</th><td>${marka.nama_cctv}</td></tr>
-                            <tr><th>Tahun Pemasangan</th><td>${marka.tahun_pemasangan}</td></tr>
-                            <tr>
-                                <td colspan="2" class="text-center">
-                                    <div class="d-flex justify-content-center gap-2">
-                                        ${detailButton}
-                                    </div>
-                                </td>
-                            </tr>
-                        </table>
-                    `;
-        
-                    // Create GeoJSON layer and add it directly to the map
-                    L.geoJSON(geojson, {
-                        pointToLayer: function(feature, latlng) {
-                            return L.marker(latlng, { icon: customIcon });
-                        },
-                        onEachFeature: function(feature, layer) {
-                            layer.bindPopup(popupContent);
-                        }
-                    }).addTo(map);
-                }
-            });
-
-            var layerBatasKecamatanData = @json($kecamatans);
-            layerBatasKecamatanData.forEach(data => {
-                var geojsonUrl = data.geojson;
-
-                fetch(geojsonUrl)
-                .then(response => response.json())
-                .then(geojsonData => {
-                    // Add GeoJSON layer with popup for each feature
-                    L.geoJSON(geojsonData, {
-                        style: {
-                            color: 'green',
-                            weight: 1
-                        },
-                        onEachFeature: function (feature, layer) {
-                            // Get Kecamatan name from properties
-                            var kecamatanName = feature.properties.KECAMATAN;
-
-                            // Bind a popup to each feature with the Kecamatan name
-                            layer.bindPopup(`<strong>Nama Kecamatan:</strong> ${kecamatanName}`);
-                        }
-                    }).addTo(map);
-                })
-                .catch(error => {
-                    console.error("Error fetching or processing GeoJSON data:", error);
+                // Definisikan ikon marker
+                var activeIcon = L.icon({
+                    iconUrl: 'icon-aktif.png',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30]
                 });
-            });
         
-            // Base layers
-            var baseLayers = {
-                "OpenStreetMap": osmLayer,
-                "Esri World Imagery": esriLayer
-            };
+                var inactiveIcon = L.icon({
+                    iconUrl: 'icon-tidak-aktif.png',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30]
+                });
         
-            // Layer control
-            L.control.layers(baseLayers).addTo(map);
+                var unknownIcon = L.icon({
+                    iconUrl: 'icon-tanpa-kondisi.png',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30]
+                });
         
-            // Function to upload photo
-            function uploadPhoto(markaJalanId) {
-                var formData = new FormData(document.getElementById('uploadForm' + markaJalanId));
+                // Layer Groups untuk status CCTV
+                var activeLayer = L.layerGroup().addTo(map);
+                var inactiveLayer = L.layerGroup();
+                var unknownLayer = L.layerGroup();
         
-                fetch(`/cctv/${markaJalanId}/upload_photo`, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                // Data CCTV dari backend
+                var cctvs = @json($markaJalans);
+        
+                // Tambahkan marker untuk setiap CCTV
+                cctvs.forEach(function (cctv) {
+                    if (cctv.geojson) {
+                        // Parse geojson data
+                        var geojson = JSON.parse(cctv.geojson);
+        
+                        // Pastikan koordinat tersedia
+                        if (geojson.type === "Point") {
+                            var coordinates = geojson.coordinates;
+        
+                            // Tentukan ikon dan layer berdasarkan status_penanganan
+                            var markerIcon;
+                            var targetLayer;
+        
+                            if (cctv.status_penanganan === 'Aktif') {
+                                markerIcon = activeIcon;
+                                targetLayer = activeLayer;
+                            } else if (cctv.status_penanganan === 'Tidak Aktif') {
+                                markerIcon = inactiveIcon;
+                                targetLayer = inactiveLayer;
+                            } else {
+                                markerIcon = unknownIcon;
+                                targetLayer = unknownLayer;
+                            }
+        
+                            // Tombol detail
+                            var detailButton = `<a href="/data-cctv/${cctv.id}" target="_blank" class="btn btn-sm btn-info text-white mx-1">
+                                <i class="fas fa-eye"></i> Lihat Detail</a>`;
+        
+                            // Konten popup dengan struktur tabel
+                            var popupContent = `
+                                <table class="table table-bordered">
+                                    <tr><th>Nama CCTV</th><td>${cctv.nama_cctv}</td></tr>
+                                    <tr><th>Tahun Pemasangan</th><td>${cctv.tahun_pemasangan}</td></tr>
+                                    <tr><th>Status</th><td>${cctv.status_penanganan || 'Tidak Diketahui'}</td></tr>
+                                    <tr>
+                                        <td colspan="2" class="text-center">
+                                            <div class="d-flex justify-content-center gap-2">
+                                                ${detailButton}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            `;
+        
+                            // Tambahkan marker ke layer grup yang sesuai
+                            L.marker([coordinates[1], coordinates[0]], { icon: markerIcon })
+                                .bindPopup(popupContent)
+                                .addTo(targetLayer);
+                        }
                     }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('uploadStatus' + markaJalanId).innerText = data.message;
-                })
-                .catch(error => {
-                    document.getElementById('uploadStatus' + markaJalanId).innerText = 'Upload gagal. Coba lagi.';
                 });
-            }
+        
+                // Tambahkan kontrol layer ke peta
+                var overlays = {
+                    "CCTV Aktif": activeLayer,
+                    "CCTV Tidak Aktif": inactiveLayer,
+                    "CCTV Tidak Memiliki Status": unknownLayer
+                };
+        
+                L.control.layers(null, overlays, { collapsed: false }).addTo(map);
+            });
         </script>
+                   
+        
     @endpush
 @endsection

@@ -146,13 +146,11 @@
                                                                 </div>
                     
                                                                 <div class="mb-3">
-                                                                    <label for="status_penanganan" class="col-form-label">Status Penanganan</label>
+                                                                    <label for="status_penanganan" class="col-form-label">Status CCTV</label>
                                                                     <select class="form-control @error('status_penanganan') is-invalid @enderror" id="status_penanganan" name="status_penanganan" required>
-                                                                        <option value="">-- Status Penanganan --</option>
-                                                                        <option value="Baik">Baik</option>
-                                                                        <option value="Perlu Tindakan">Perlu Tindakan</option>
-                                                                        <option value="Rencana">Rencana</option>
-                                                                        <option value="Hilang">Hilang</option>
+                                                                        <option value="">-- Status CCTV --</option>
+                                                                        <option value="Aktif">Aktif</option>
+                                                                        <option value="Tidak Aktif">Tidak Aktif</option>
                                                                     </select>
                                                                     @error('status_penanganan')
                                                                         <div class="invalid-feedback">{{ $message }}</div>

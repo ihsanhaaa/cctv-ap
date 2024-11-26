@@ -8,6 +8,7 @@ use App\Models\Kecamatan;
 use App\Models\LokasiCctv;
 use App\Models\StatusCctv;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CctvController extends Controller
 {
@@ -104,9 +105,30 @@ class CctvController extends Controller
 
     public function showMap()
     {
-        $markaJalans = Cctv::with(['lokasi', 'fotos' => function($query) {
-            $query->latest()->take(1);
-        }])->get();
+        $markaJalans = DB::table('cctvs')
+            ->select(
+                'cctvs.*', 
+                'lokasi_cctvs.nama_jalan', 
+                'lokasi_cctvs.geojson', 
+                'latest_status.tgl_temuan', 
+                'latest_status.status_penanganan', 
+                'latest_status.deskripsi'
+            )
+            // Join dengan lokasi CCTV
+            ->leftJoin('lokasi_cctvs', 'cctvs.id', '=', 'lokasi_cctvs.cctv_id')
+            
+            // Join dengan status CCTV terbaru menggunakan subquery
+            ->leftJoin(DB::raw('(SELECT cctv_id, MAX(tgl_temuan) AS latest_date 
+                                FROM status_cctvs 
+                                GROUP BY cctv_id) AS max_status'), 
+                    'cctvs.id', '=', 'max_status.cctv_id')
+            
+            ->leftJoin('status_cctvs AS latest_status', function ($join) {
+                $join->on('cctvs.id', '=', 'latest_status.cctv_id')
+                    ->on('latest_status.tgl_temuan', '=', DB::raw('max_status.latest_date'));
+            })
+            ->get();
+
 
         $kecamatans = Kecamatan::all();
 
